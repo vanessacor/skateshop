@@ -1,0 +1,12 @@
+<h1>{{title}}</h1>
+<p>Welcome to {{title}}</p>
+{{#if error}}
+  <p>Error getting the data</p>
+{{else}}
+  <p>SkateShop Inventory</p>
+  <ul>
+    <li>Number of Products: {{data.product_count}}</li>
+    <li>Number of Brands: {{data.brand_count}}</li>
+    <li>Number of Categories: {{data.category_count}}</li>
+  </ul>
+{{/if}}
