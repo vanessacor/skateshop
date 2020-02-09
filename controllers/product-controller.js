@@ -8,6 +8,7 @@ const Brand = require('../models/brand');
 const Category = require('../models/category');
 
 const async = require('async');
+const validator = require('express-validator');
 
 
 exports.index = function(req, res) {   
@@ -29,18 +30,20 @@ exports.index = function(req, res) {
 
 // Display list of all products.
 exports.product_list = function(req, res, next) {
-    const promise = Product.find()
+      Product.find()
         .populate('category')
         .populate('brand')
         .exec()
-
-    promise.then((list_products) => {
-        res.render('product_list', { title: 'Product List', product_list: list_products });
-    })
-
-    promise.catch((err) => {
-        return next(err);
-    })
+        .then((list_products) => {
+          const data = {
+            title: "Product List",
+            product_list: list_products
+          }
+          res.render('product_list', data);
+        })
+        .catch((err) => {
+          return next(err);
+        })
    
 };
 
@@ -72,9 +75,30 @@ exports.product_detail = function(req, res, next) {
 };
 
 // Display product create form on GET.
-exports.product_create_get = function(req, res) {
-    res.send('NOT IMPLEMENTED: Product create GET');
+exports.product_create_get = function(req, res, next) {
+
+  const brandQuery = Brand.find();
+  const categoryQuery = Category.find();
+  
+  Promise.all([brandQuery, categoryQuery]) 
+    .then((results) => {
+      const brands = results[0];
+      const categories = results[1];
+
+      const data = {
+        title: 'Create Product',
+        brands: brands,
+        categories: categories
+      }
+
+      res.render('product_form', data);
+    })
+    
+    .catch((error) => {
+      next(error)
+  });
 };
+
 
 // Handle product create on POST.
 exports.product_create_post = function(req, res) {

@@ -5,7 +5,8 @@ const ObjectId = require('mongoose').Types.ObjectId
 const Brand = require('../models/brand');
 const Product = require('../models/product');
 
-const async = require('async')
+const async = require('async');
+const validator = require('express-validator')
 
 // Display list of all Brand.
 exports.brand_list = function(req, res) {
@@ -50,14 +51,61 @@ exports.brand_detail = function(req, res, next) {
 };
 
 // Display Brand create form on GET.
-exports.brand_create_get = function(req, res) {
-    res.send('NOT IMPLEMENTED: Brand create GET');
+exports.brand_create_get = function(req, res, next) {
+    res.render('brand_form', { title: 'Create Brand' })
 };
 
 // Handle Brand create on POST.
-exports.brand_create_post = function(req, res) {
-    res.send('NOT IMPLEMENTED: Brand create POST');
-};
+exports.brand_create_post = [
+       
+  // Validate that the name field is not empty.
+  validator.body('name', 'Brand name required').isLength({ min: 1 }).trim(),
+  
+  // Sanitize (escape) the name field.
+  validator.sanitizeBody('name').escape(),
+
+  // Process request after validation and sanitization.
+  (req, res, next) => {
+
+    // Extract the validation errors from a request.
+    const errors = validator.validationResult(req);
+
+    // Create a brand object with escaped and trimmed data.
+    const brand = new Brand(
+      { name: req.body.name }
+    );
+
+
+    if (!errors.isEmpty()) {
+      // There are errors. Render the form again with sanitized values/error messages.
+      res.render('brand_form', { title: 'Create Brand', brand: brand, errors: errors.array()});
+      return;
+    }
+    else {
+      // Data from form is valid.
+      // Check if brand with same name already exists.
+      Brand.findOne({ 'name': req.body.name })
+        .exec( function(err, found_brand) {
+           if (err) { return next(err); }
+
+           if (found_brand) {
+             // brand exists, redirect to its detail page.
+             res.redirect(found_brand.url);
+           }
+           else {
+
+             brand.save(function (err) {
+               if (err) { return next(err); }
+               // brand saved. Redirect to brand detail page.
+               res.redirect(brand.url);
+             });
+
+           }
+
+         });
+    }
+  }
+];
 
 // Display Brand delete form on GET.
 exports.brand_delete_get = function(req, res) {

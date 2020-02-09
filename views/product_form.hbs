@@ -1,0 +1,27 @@
+<h1>{{title}}</h1>
+<form method="POST" class="name" novalidate>
+  <div class="form-field">
+    <input type="text" name="name" placeholder="Product Name">
+  </div>
+  <div class="form-field">
+    <label>Brand</label>
+    <select type="select" placeholder="Select Brand">
+    {{#each brands}}
+      <option>{{name}}</option>
+    {{/each}}
+    </select>
+    
+  </div>
+  <div class="form-field">
+    <label>Category</label>
+    <select type="select" placeholder="Select Category">
+    {{#each categories}}
+      <option>{{name}}</option>
+    {{/each}}
+    </select>
+    
+  </div>
+  <div class="form-field">
+    <input type="submit" class="button">
+  </div>
+</form>
