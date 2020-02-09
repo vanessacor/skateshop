@@ -24,33 +24,30 @@ exports.category_list = function(req, res) {
 
 // Display detail page for a specific Category.
 exports.category_detail = function(req, res, next) {
-    async.parallel({
-        category: function(callback) {
-            Category.findById(req.params.id)
-              .exec(callback);
-        },
 
-        category_products: function(callback) {
-            Product.find({ 'category': req.params.id })
-              .exec(callback);
-        },
+    const categoryQuery = Category.findById(req.params.id).exec()
+    const productsQuery = Product.find({ 'category': req.params.id }).exec();
 
-    }, function(err, results) {
-        if (err) { return next(err); }
-        if (results.category==null) { // No results.
-            var err = new Error('Category not found');
-            err.status = 404;
-            return next(err);
-        }
-        // Successful, so render
-        console.log('req.params.id ',req.params.id)
-        const data = { 
-            title: 'Category Detail', 
-            category: results.category, 
-            category_products: results.category_products 
-        }
-        res.render('category_detail', data);
-    });
+    Promise.all([categoryQuery, productsQuery])
+        .then((results) => {
+            const category = results[0];
+            const products = results[1];
+            if (!category) { // No results.
+                const err = new Error('Category not found');
+                err.status = 404;
+                return next(err);
+            }
+            // Successful, so render
+            const data = { 
+                title: 'Category Detail', 
+                category: category, 
+                category_products: products 
+            }
+            res.render('category_detail', data);
+        })
+        .catch((error) => {
+            next(error)
+        });
 };
 
 // Display Category create form on GET.

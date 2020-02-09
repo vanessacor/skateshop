@@ -29,43 +29,46 @@ exports.index = function(req, res) {
 
 // Display list of all products.
 exports.product_list = function(req, res, next) {
-  Product.find()
-  .populate('category')
-  .populate('brand')
-  .exec(function (err, list_products) {
-    if (err) { return next(err); }
-    //Successful, so render
-    res.render('product_list', { title: 'Product List', product_list: list_products });
-  });
+    const promise = Product.find()
+        .populate('category')
+        .populate('brand')
+        .exec()
+
+    promise.then((list_products) => {
+        res.render('product_list', { title: 'Product List', product_list: list_products });
+    })
+
+    promise.catch((err) => {
+        return next(err);
+    })
    
 };
 
 // Display detail page for a specific product.
 exports.product_detail = function(req, res, next) {
-    async.parallel({
-      product: function(callback) {
 
-        Product.findById(req.params.id)
-          .populate('category')
-          .populate('brand')
-          .exec(callback);
-      },
-      
-    }, function(err, results) {
-        if (err) { return next(err); }
-        if (results.product==null) { // No results.
-            var err = new Error('product not found');
-            err.status = 404;
-            return next(err);
-        }
-        // Successful, so render.
-        console.log('req.params.id ',req.params.id)
-        const data = {
-          title: results.product.name,
-          product: results.product
-        }
-        res.render('product_detail', data);
-    });
+    Product.findById(req.params.id)
+        .populate('category')
+        .populate('brand')
+        .then((product) => {
+            if (!product) { // No results.
+                var err = new Error('product not found');
+                err.status = 404;
+                return next(err);
+            }
+            // Successful, so render.
+            console.log('req.params.id ',req.params.id)
+            const data = {
+            title: product.name,
+            product: product
+            }
+            res.render('product_detail', data);
+        })
+        .catch((err) => {
+            next(err);
+        })
+
+
 };
 
 // Display product create form on GET.
