@@ -1,30 +1,48 @@
 'use strict'
 
-// const ObjectId = require('mongoose').Types.ObjectId;
-
 // const mongoose = require('mongoose')
 const Product = require('../models/product')
 const Brand = require('../models/brand')
 const Category = require('../models/category')
 
-const async = require('async')
+// const async = require('async')
 const validator = require('express-validator')
 
-exports.index = function (req, res) {
-  async.parallel({
-    product_count: function (callback) {
-      Product.countDocuments({}, callback) // Pass an empty object as match condition to find all documents of this collection
-    },
-    brand_count: function (callback) {
-      Brand.countDocuments({}, callback)
-    },
-    category_count: function (callback) {
-      Category.countDocuments({}, callback)
-    }
-  }, function (err, results) {
-    res.render('index', { title: 'Skate Shop Inventory', error: err, data: results })
-  })
+exports.index = function (req, res, next) {
+  const productCountQuery = Product.countDocuments()
+  const brandCountQuery = Brand.countDocuments()
+  const categoryCountQuery = Category.countDocuments()
+
+  Promise.all([productCountQuery, brandCountQuery, categoryCountQuery])
+    .then((results) => {
+      const data = {
+        title: 'Skate Shop Inventory',
+        productCount: results[0],
+        brandCount: results[1],
+        categoryCount: results[2]
+      }
+
+      res.render('index', data)
+    })
+    .catch((err) => {
+      return next(err)
+    })
 }
+
+//   async.parallel({
+//     product_count: function (callback) {
+//       Product.countDocuments({}, callback) // Pass an empty object as match condition to find all documents of this collection
+//     },
+//     brand_count: function (callback) {
+//       Brand.countDocuments({}, callback)
+//     },
+//     category_count: function (callback) {
+//       Category.countDocuments({}, callback)
+//     }
+//   }, function (err, results) {
+//     res.render('index', { title: 'Skate Shop Inventory', error: err, data: results })
+//   })
+// }
 
 // Display list of all products.
 exports.product_list = function (req, res, next) {
@@ -32,10 +50,10 @@ exports.product_list = function (req, res, next) {
     .populate('category')
     .populate('brand')
     .exec()
-    .then((list_products) => {
+    .then((listProducts) => {
       const data = {
         title: 'Product List',
-        product_list: list_products
+        product_list: listProducts
       }
       res.render('product_list', data)
     })
@@ -56,7 +74,6 @@ exports.product_detail = function (req, res, next) {
         return next(err)
       }
       // Successful, so render.
-      console.log('req.params.id ', req.params.id)
       const data = {
         title: product.name,
         product: product
@@ -93,18 +110,93 @@ exports.product_create_get = function (req, res, next) {
 }
 
 // Handle product create on POST.
-exports.product_create_post = function (req, res) {
-  res.send('NOT IMPLEMENTED: Product create POST')
-}
+exports.product_create_post = [
+
+  // Validate fields.
+  validator.check('name', 'Name must not be empty.').isLength({ min: 1 }).trim(),
+  validator.check('category', 'Category must not be empty.').isLength({ min: 1 }).trim(),
+  validator.check('description', 'Description must not be empty.').isLength({ min: 1 }).trim(),
+  validator.check('brand', 'Brand must not be empty.').isLength({ min: 1 }).trim(),
+  validator.check('price', 'Price must not be empty').isLength({ min: 1 }).trim(),
+  validator.check('stock', 'Stock must not be empty').isLength({ min: 1 }).trim(),
+
+  // Sanitize fields (using wildcard).
+  validator.sanitizeBody('*').escape(),
+
+  // Process request after validation and sanitization.
+  (req, res, next) => {
+    // Extract the validation errors from a request.
+    const errors = validator.validationResult(req)
+
+    // Create a Product object with escaped and trimmed data.
+    const product = new Product(
+      {
+        name: req.body.name,
+        category: req.body.category,
+        description: req.body.description,
+        brand: req.body.brand,
+        price: req.body.price,
+        stock: req.body.stock
+      })
+
+    if (!errors.isEmpty()) {
+      res.redirect('/catalog/product/create')
+    } else {
+      // Data from form is valid. Save product.
+      product.save(function (err) {
+        if (err) { return next(err) }
+        // successful - redirect to new product record.
+        res.redirect(product.url)
+      })
+    }
+  }
+]
 
 // Display product delete form on GET.
-exports.product_delete_get = function (req, res) {
-  res.send('NOT IMPLEMENTED: Product delete GET')
+exports.product_delete_get = function (req, res, next) {
+  Product.findById(req.params.id)
+    .exec()
+
+    .then((results) => {
+      const products = results
+
+      if (products == null) { // No results.
+        res.redirect('/catalog/product')
+      }
+
+      const data = {
+        title: 'Delete product',
+        product: products
+      }
+      res.render('product_delete', data)
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Handle product delete on POST.
-exports.product_delete_post = function (req, res) {
-  res.send('NOT IMPLEMENTED: Product delete POST')
+exports.product_delete_post = function (req, res, next) {
+  Product.findById(req.params.id)
+    .exec()
+
+    .then((results) => {
+      const product = results
+
+      if (product == null) { // No results.
+        res.redirect('/catalog/product')
+      } else {
+        // Category has no products. Delete object and redirect to the list of categories.
+        Product.findByIdAndRemove(product, function deleteProduct (err) {
+          if (err) { return next(err) }
+          // Success - go to category list
+          res.redirect('/catalog/product')
+        })
+      }
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Display product update form on GET.

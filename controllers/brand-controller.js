@@ -3,7 +3,6 @@
 const Brand = require('../models/brand')
 const Product = require('../models/product')
 
-const async = require('async')
 const validator = require('express-validator')
 
 // Display list of all Brand.
@@ -23,33 +22,29 @@ exports.brand_list = function (req, res, next) {
 
 // Display detail page for a specific Brand.
 exports.brand_detail = function (req, res, next) {
-  async.parallel({
-    brand: function (callback) {
-      Brand.findById(req.params.id)
-        .exec(callback)
-    },
+  const brandQuery = Brand.findById(req.params.id).exec()
+  const productsQuery = Product.find({ brand: req.params.id }).exec()
 
-    brand_products: function (callback) {
-      Product.find({ brand: req.params.id })
-        .exec(callback)
-    }
-
-  }, function (err, results) {
-    if (err) { return next(err) }
-    if (results.brand == null) { // No results.
-      const error = new Error('Brand not found')
-      error.status = 404
-      return next(error)
-    }
-    // Successful, so render
-    console.log('req.params.id ', req.params.id)
-    const data = {
-      title: 'Brand Detail',
-      brand: results.brand,
-      brand_products: results.brand_products
-    }
-    res.render('brand_detail', data)
-  })
+  Promise.all([brandQuery, productsQuery])
+    .then((results) => {
+      const brand = results[0]
+      const products = results[1]
+      if (!brand) { // No results.
+        const err = new Error('Brand not found')
+        err.status = 404
+        return next(err)
+      }
+      // Successful, so render
+      const data = {
+        title: 'Brand Detail',
+        brand: brand,
+        brand_products: products
+      }
+      res.render('brand_detail', data)
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Display Brand create form on GET.
@@ -77,8 +72,8 @@ exports.brand_create_post = [
     )
 
     if (!errors.isEmpty()) {
-      // There are errors. Render the form again with sanitized values/error messages.
-      res.render('brand_form', { title: 'Create Brand', brand: brand, errors: errors.array() })
+      // There are errors.
+      res.redirect('/catalog/brand/create')
     } else {
       // Data from form is valid.
       // Check if brand with same name already exists.
@@ -102,13 +97,64 @@ exports.brand_create_post = [
 ]
 
 // Display Brand delete form on GET.
-exports.brand_delete_get = function (req, res) {
-  res.send('NOT IMPLEMENTED: Brand delete GET')
+exports.brand_delete_get = function (req, res, next) {
+  const brandQuery = Brand.findById(req.params.id).exec()
+  const productQuery = Product.find({ brand: req.params.id }).exec()
+
+  Promise.all([brandQuery, productQuery])
+    .then((results) => {
+      const brands = results[0]
+      const products = results[1]
+
+      if (brands == null) { // No results.
+        res.redirect('/catalog/brand')
+      }
+
+      const data = {
+        title: 'Delete brand',
+        brand: brands,
+        brand_products: products
+      }
+      res.render('brand_delete', data)
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Handle Brand delete on POST.
-exports.brand_delete_post = function (req, res) {
-  res.send('NOT IMPLEMENTED: Brand delete POST')
+exports.brand_delete_post = function (req, res, next) {
+  const brandQuery = Brand.findById(req.body.brandid).exec()
+  const productQuery = Product.find({ brand: req.body.brandid }).exec()
+
+  Promise.all([brandQuery, productQuery])
+    .then((results) => {
+      const brand = results[0]
+      const products = results[1]
+
+      if (brand == null) { // No results.
+        res.redirect('/catalog/brand')
+      }
+
+      if (products.length > 0) {
+        const data = {
+          title: 'Delete Brand',
+          brand: brand,
+          brand_products: products
+        }
+        res.render('brand_delete', data)
+      } else {
+        // Category has no products. Delete object and redirect to the list of categories.
+        Brand.findByIdAndRemove(brand, function deleteBrand (err) {
+          if (err) { return next(err) }
+          // Success - go to category list
+          res.redirect('/catalog/brand')
+        })
+      }
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Display Brand update form on GET.

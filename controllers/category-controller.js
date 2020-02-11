@@ -71,8 +71,8 @@ exports.category_create_post = [
     )
 
     if (!errors.isEmpty()) {
-      // There are errors. Render the form again with sanitized values/error messages.
-      res.render('category_form', { title: 'Create Category', category: category, errors: errors.array() })
+      // There are errors.
+      res.redirect('/catalog/category/create')
     } else {
       // Data from form is valid.
       // Check if category with same name already exists.
@@ -96,13 +96,64 @@ exports.category_create_post = [
 ]
 
 // Display category delete form on GET.
-exports.category_delete_get = function (req, res) {
-  res.send('NOT IMPLEMENTED: category delete GET')
+exports.category_delete_get = function (req, res, next) {
+  const categoryQuery = Category.findById(req.params.id).exec()
+  const productQuery = Product.find({ category: req.params.id }).exec()
+
+  Promise.all([categoryQuery, productQuery])
+    .then((results) => {
+      const categories = results[0]
+      const products = results[1]
+
+      if (categories == null) { // No results.
+        res.redirect('/catalog/category')
+      }
+
+      const data = {
+        title: 'Delete Category',
+        category: categories,
+        category_products: products
+      }
+      res.render('category_delete', data)
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Handle category delete on POST.
-exports.category_delete_post = function (req, res) {
-  res.send('NOT IMPLEMENTED: category delete POST')
+exports.category_delete_post = function (req, res, next) {
+  const categoryQuery = Category.findById(req.body.categoryid).exec()
+  const productQuery = Product.find({ category: req.body.categoryid }).exec()
+
+  Promise.all([categoryQuery, productQuery])
+    .then((results) => {
+      const category = results[0]
+      const products = results[1]
+
+      if (category == null) { // No results.
+        res.redirect('/catalog/category')
+      }
+
+      if (products.length > 0) {
+        const data = {
+          title: 'Delete Category',
+          category: category,
+          category_products: products
+        }
+        res.render('category_delete', data)
+      } else {
+        // Category has no products. Delete object and redirect to the list of categories.
+        Category.findByIdAndRemove(category, function deleteCategory (err) {
+          if (err) { return next(err) }
+          // Success - go to category list
+          res.redirect('/catalog/category')
+        })
+      }
+    })
+    .catch((error) => {
+      next(error)
+    })
 }
 
 // Display category update form on GET.

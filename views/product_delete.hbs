@@ -1,0 +1,7 @@
+<h1>{{title}}</h1>
+<p>Delete {{product.name}}</p>
+  <p>Do you really want to delete this Product?</p>
+  <form method="POST" action=" ">
+    <input type="hidden" name="productid" required="true" value="{{product.id}}">
+    <button type="submit">Delete</button>
+  </form>

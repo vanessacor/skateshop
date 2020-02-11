@@ -1,0 +1,19 @@
+<h1>{{title}}</h1>
+<p>Delete {{category.name}}</p>
+{{#if category_products.length}}
+<p>You need to delete the following products before delete this category!</p>
+<div>
+  <h4>Products</h4>
+  <ul>
+    {{#each category_products}}
+       <li><a href="{{url}}">{{name}}</a></li>
+    {{/each}}
+  </ul>
+</div>
+{{else}}
+  <p>Do you really want to delete this Category?</p>
+  <form method="POST" action=" ">
+    <input type="hidden" name="categoryid" required="true" value="{{category.id}}">
+    <button type="submit">Delete</button>
+  </form>
+{{/if}}
