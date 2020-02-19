@@ -5,7 +5,6 @@ const Product = require('../models/product')
 const Brand = require('../models/brand')
 const Category = require('../models/category')
 
-// const async = require('async')
 const validator = require('express-validator')
 
 exports.index = function (req, res, next) {
