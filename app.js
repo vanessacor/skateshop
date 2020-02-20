@@ -12,7 +12,8 @@ var catalogRouter = require('./routes/catalog') // Import routes for "catalog" a
 var app = express()
 
 // Set up mongoose connection
-var mongoDB = 'mongodb+srv://vanessa:sK8Shop@cluster0-ckn7c.mongodb.net/SkateShop?retryWrites=true&w=majority'
+var devDbUrl = 'mongodb+srv://vanessa:sK8Shop@cluster0-ckn7c.mongodb.net/SkateShop?retryWrites=true&w=majority'
+var mongoDB = process.env.MONGODB_URI || devDbUrl
 mongoose.connect(mongoDB, { useNewUrlParser: true })
 var db = mongoose.connection
 db.on('error', console.error.bind(console, 'MongoDB connection error:'))
