@@ -28,21 +28,6 @@ exports.index = function (req, res, next) {
     })
 }
 
-//   async.parallel({
-//     product_count: function (callback) {
-//       Product.countDocuments({}, callback) // Pass an empty object as match condition to find all documents of this collection
-//     },
-//     brand_count: function (callback) {
-//       Brand.countDocuments({}, callback)
-//     },
-//     category_count: function (callback) {
-//       Category.countDocuments({}, callback)
-//     }
-//   }, function (err, results) {
-//     res.render('index', { title: 'Skate Shop Inventory', error: err, data: results })
-//   })
-// }
-
 // Display list of all products.
 exports.product_list = function (req, res, next) {
   Product.find()
